@@ -1,0 +1,80 @@
+#!/usr/bin/env python3
+
+import subprocess
+import os
+import sys
+import pprint
+import json
+import re
+
+#google python readline
+#google standard out standard in standard err
+try:
+
+    while True:
+        stdin = None
+        info = input("~~ ").split()
+        original_info = info.copy()
+
+        # curl https://api.coinbase.com/v2/prices/spot?currency=USD
+        # https://api.coinbase.com/v2/currencies
+
+        def _bitcoin(self, info):
+            regex = re.compile('^[A-Z]{3}$')
+            return_curl = 'curl https://api.coinbase.com/v2/prices/spot?currency=USD'
+            currency_arg = [arg for arg in original_info if regex.match(arg)]
+            
+            if len(original_info) and len(currency_arg):
+                try:
+                    pwd = os.getcwd()
+                    currency_json = open(pwd + "/lib/pysh/currency.json", encoding='utf-8')
+                    currency = json.loads(currency_json.read())
+
+                    if len([ monies for monies in currency['data'] if currency_arg[0] == monies['id'] ]):
+                        return_curl = return_curl[:-3] + currency_arg[0]
+                    
+                finally:
+                    currency_json.close()
+
+            return return_curl
+
+        commands = {
+            'bitcoin': _bitcoin
+        }
+
+        if info[0] in commands:
+            info = commands[info[0]](commands, info)
+        
+        try:
+
+            def run_subprocess(info, stdin=None, stdout=None):
+                print('type info ::', type(info))
+                print(info)
+                completed =  subprocess.run(info, stdout=subprocess.PIPE, check=True, shell=True)
+                return completed
+
+            def _bitcoin_run_process(self):
+                btc_process = run_subprocess(info)
+                btc = json.loads(btc_process.stdout.decode('utf-8'))
+                btc_base = btc['data']['base']
+                btc_price = btc['data']['amount']
+                btc_currency = btc['data']['currency']
+                print(f"Current Price of ${btc_base} :: [ ${btc_price} ] in ${btc_currency}")
+                return btc_process
+
+            print_stdout = {
+                'bitcoin': _bitcoin_run_process
+            }
+
+            if original_info[0] in print_stdout:
+                completed_process = print_stdout[original_info[0]](print_stdout)
+                print('\n', 'returncode ::', completed_process.returncode)
+
+        except subprocess.CalledProcessError as err:
+            print('type ::', type(info))
+            print(info)
+            print('ERROR:', err, file=sys.stderr)
+            print('\n')
+    
+except KeyboardInterrupt as err:
+    print('ya Bye Bye...')
