@@ -1,0 +1,158 @@
+#!/usr/bin/env python3
+
+from hashlib import new
+
+
+try:
+    import subprocess
+    import os
+    import re
+
+    from bs4 import BeautifulSoup
+
+
+    while True:
+
+        info = input("~~ ").split()
+        teams = [ "dodgers", "rays", "redsox", "yankees", "bluejays", "orioles", "whitesox", "guardians", "tigers", "royals", "twins", "mariners", "athletics", "angels", "rangers", "braves", "phillies", "mets", "marlins", "nationals", "brewers", "cardinals", "reds", "cubs", "pirates", "giants", "padres", "rockies", "dbacks" ]
+        pwd = os.getcwd()
+
+        def curl_process_markup(url):
+            markup_process = subprocess.Popen([ 'curl', "-L", url ], stdout=subprocess.PIPE)
+            markup = markup_process.communicate()[0].decode('utf-8')
+            return markup
+
+        regex = re.compile("^(Roster|roster)[^\\S\\n\\t]{0,1}40$")
+
+        if regex.match(info[0]):
+            forty_man_roster_url = "https://www.mlb.com/dodgers/roster/40-man"
+            
+            if len(info) > 1:
+                info[1] = info[1].lower()
+
+                if info[1] == "astros":
+                    print("todo :: get fked")
+                    print("fk astros!*!**!, team not found!!! returning only team that matters")
+
+                elif info[1] in teams:
+                    forty_man_roster_url = f"https://www.mlb.com/{info[1]}/roster/40-man"
+                else:
+                    print("team not found")
+                    continue
+
+            print("forty_man_roster_url = ", forty_man_roster_url)
+
+            try:
+                markup = curl_process_markup(forty_man_roster_url)
+
+                tmp_40 = open(pwd + "/scripts/lib/scrappy/roster/tmp_roster.html", "w+")
+                tmp_40.write(markup)
+                tmp_40.close
+
+                with open(pwd + "/scripts/lib/scrappy/roster/tmp_roster.html") as forty_table_html:
+                    soup = BeautifulSoup(forty_table_html, features="html.parser")
+
+                roster_markup = soup.find_all(["tr", "info"])
+
+            except OSError as err:
+                print(err)
+
+            
+            try:
+
+                for el in roster_markup:
+
+                    serving = BeautifulSoup(repr(el), features="html.parser")
+                    intermidiate_element = serving.find(colspan="2")
+
+                    if intermidiate_element:
+                        print("\n", "-=-=-=-=-=-=-=-=-=-=-=-=-=-=", "\n")
+                        print(f" -=-=-=- ${intermidiate_element.get_text().upper()} -=-=-=-")
+                        print("\n", "-=-=-=-=-=-=-=-=-=-=-=-=-=-=", "\n")
+
+                    else:
+                        print("\n", "-=-=-=-=-=-=-=-=-=-=-=-=-=-=", "\n")
+                        print(serving.find("a").get_text())
+                        print("Ht :: ", serving.find("td", "height").get_text())
+                        print("Wt :: ", serving.find("td", "weight").get_text())
+                        print("DOB :: ", serving.find("td", "birthday").get_text())
+                        print("\n", "-=-=-=-=-=-=-=-=-=-=-=-=-=-=", "\n")
+
+                
+            except KeyError as err:
+                print(f"${err}")
+
+        regex = re.compile("^(Roster|roster)[\s]?52$")
+
+        if regex.match(info[0]):
+            raiders_roster_url = "https://www.espn.com/nfl/team/roster/_/name/lv/las-vegas-raiders"
+
+            markup = curl_process_markup(raiders_roster_url)
+            tmp_52 = open(pwd + "/scripts/lib/scrappy/roster/tmp_roster.html", "w+")
+            tmp_52.write(markup)
+            tmp_52.close
+
+            with open(pwd + "/scripts/lib/scrappy/roster/tmp_roster.html") as team_roster:
+                soup = BeautifulSoup(team_roster, features="html.parser")
+
+            my_soup = soup.find_all("tr")
+            inner_html_txt = ""
+
+            for el in my_soup:
+                serving = BeautifulSoup(repr(el), features="html.parser")
+                inner_html_txt = " | ".join([inner_html_txt ,serving.get_text(" ")])
+            
+            roster_list_rough = inner_html_txt.split(" | ")
+
+
+
+            for line in roster_list_rough:
+            #     new_line = line.split('"')
+            #     left = new_line[0]
+            #     right = new_line[1]
+                print(line)
+
+        regex = re.compile("^(N|n)ext_?(G|g)ame$")
+
+        if info[0] == "ng" or regex.match(info[0]):
+            team_schedule_url = "https://www.espn.com/mlb/team/schedule/_/name/lad/los-angeles-dodgers"
+                
+            # print("team_schedule_url = ", team_schedule_url, "\n")
+
+            try:
+                markup = curl_process_markup(team_schedule_url)
+                tmp_schedule = open(pwd + "/scripts/lib/scrappy/next_game/tmp_schedule.html", "w+")
+                tmp_schedule.write(markup)
+                tmp_schedule.close
+
+                with open(pwd + "/scripts/lib/scrappy/next_game/tmp_schedule.html") as team_schedule:
+                    soup = BeautifulSoup(team_schedule, features="html.parser")
+                    
+                my_soup = soup.find_all("tr")
+                inner_html_txt = ""
+
+                for el in my_soup:
+                    serving = BeautifulSoup(repr(el), features="html.parser")
+                    inner_html_txt = "".join([inner_html_txt, serving.get_text()])
+                    
+                schedule_list_rough = inner_html_txt.split(",")
+                schedule_list_rough[1] = schedule_list_rough[0][-3:] + schedule_list_rough[1]
+                schedule_list_rough.pop(0)
+
+                for i, line in enumerate(schedule_list_rough):
+                    day_for_next = line[-3:]
+                    day_regex = re.compile("^(Mon|Tue|Wed|Thu|Fri|Sat|Sun)$")
+                    if day_regex.match(day_for_next) and schedule_list_rough[i + 1]:
+                        schedule_list_rough[i + 1] = day_for_next + schedule_list_rough[i + 1]
+
+                    schedule_list_rough[i] = line.split(" Tickets ")[0]
+                    print(schedule_list_rough[i])
+
+            except OSError as err:
+                print(err)
+
+
+
+except KeyboardInterrupt as err:
+    print('ya Bye Bye')
+
