@@ -1,2 +1,2 @@
-scrappy/next_game
-scrappy/roster
+lib/scrappy/next_game/*
+lib/scrappy/roster/*
